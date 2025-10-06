@@ -4,6 +4,7 @@ import requests
 from PIL import Image
 from io import BytesIO
 import time
+import base64
 
 st.set_page_config(page_title="TikTok Script Generator", page_icon="🎬", layout="wide")
 
@@ -28,7 +29,7 @@ with st.sidebar:
     st.markdown("### 🎨 Geração de Imagens")
     gerar_imagens = st.checkbox("Gerar imagens automaticamente", value=True)
     if gerar_imagens:
-        st.info("🎨 Imagens com **Flux 1.1 Pro** (qualidade profissional)")
+        st.info("🎨 Imagens com **Stable Diffusion XL** (alta qualidade, gratuito)")
 
 col1, col2 = st.columns([1, 1])
 
@@ -45,7 +46,7 @@ if st.button("🚀 Gerar Conteúdo Completo", type="primary", use_container_widt
         st.stop()
     
     try:
-        api_key = "AIzaSyC7_BhPwmurF0Wo8bNF3r-R20jmlCSJNGs"
+        api_key = "AIzaSyDdhBQhmX_IXPH1vrIQA0hu4pyXhw9eSR4"
         genai.configure(api_key=api_key)
         model_text = genai.GenerativeModel('gemini-2.0-flash-exp')
         
@@ -165,14 +166,7 @@ DESCRIÇÃO + HASHTAGS:
         if gerar_imagens and prompts_list:
             st.markdown("---")
             st.markdown("### 🖼️ Imagens Geradas com IA")
-            st.info(f"🎨 Gerando {len(prompts_list)} imagens com **Flux 1.1 Pro** (qualidade profissional)... Aguarde.")
-            
-            fal_key = "99587ba2-f99b-4cc3-a505-fd4f581ba722:c0e36bbb2a82285ede5a9f98720d463f"
-            
-            headers = {
-                "Authorization": f"Key {fal_key}",
-                "Content-Type": "application/json"
-            }
+            st.info(f"🎨 Gerando {len(prompts_list)} imagens com **Stable Diffusion XL**... Aguarde.")
             
             for idx, prompt_data in enumerate(prompts_list):
                 timestamp = prompt_data["timestamp"]
@@ -180,58 +174,56 @@ DESCRIÇÃO + HASHTAGS:
                 
                 st.markdown(f"#### 📸 {timestamp}")
                 
-                with st.spinner(f"🎨 Gerando imagem profissional {idx+1}/{len(prompts_list)}..."):
+                with st.spinner(f"🎨 Gerando imagem {idx+1}/{len(prompts_list)}..."):
                     try:
+                        # Usar API gratuita do Segmind (SDXL)
                         payload = {
                             "prompt": prompt_img,
-                            "image_size": "landscape_16_9",
-                            "num_inference_steps": 28,
-                            "guidance_scale": 3.5,
-                            "num_images": 1
+                            "negative_prompt": "low quality, blurry, distorted, bad anatomy, ugly",
+                            "samples": 1,
+                            "scheduler": "UniPC",
+                            "num_inference_steps": 25,
+                            "guidance_scale": 8,
+                            "seed": 42 + idx,
+                            "img_width": 1024,
+                            "img_height": 1024,
+                            "base64": False
                         }
                         
                         response_img = requests.post(
-                            "https://fal.run/fal-ai/flux-pro/v1.1",
-                            headers=headers,
+                            "https://api.segmind.com/v1/sdxl1.0-txt2img",
                             json=payload,
                             timeout=60
                         )
                         
                         if response_img.status_code == 200:
-                            result = response_img.json()
-                            image_url = result.get("images", [{}])[0].get("url")
+                            image = Image.open(BytesIO(response_img.content))
+                            st.image(image, caption=f"Imagem SDXL para {timestamp}", use_container_width=True)
                             
-                            if image_url:
-                                img_response = requests.get(image_url)
-                                image = Image.open(BytesIO(img_response.content))
-                                st.image(image, caption=f"Imagem Flux Pro para {timestamp}", use_container_width=True)
-                                
-                                buf = BytesIO()
-                                image.save(buf, format="PNG")
-                                st.download_button(
-                                    label=f"📥 Download {timestamp}",
-                                    data=buf.getvalue(),
-                                    file_name=f"tiktok_flux_pro_{timestamp.replace(':', '-')}.png",
-                                    mime="image/png",
-                                    key=f"download_{idx}"
-                                )
-                            else:
-                                st.warning("⚠️ Erro ao obter URL da imagem")
-                                st.code(prompt_img, language="text")
+                            buf = BytesIO()
+                            image.save(buf, format="PNG")
+                            st.download_button(
+                                label=f"📥 Download {timestamp}",
+                                data=buf.getvalue(),
+                                file_name=f"tiktok_sdxl_{timestamp.replace(':', '-')}.png",
+                                mime="image/png",
+                                key=f"download_{idx}"
+                            )
                         else:
-                            st.error(f"❌ Erro {response_img.status_code}: {response_img.text[:200]}")
+                            st.warning(f"⚠️ Erro {response_img.status_code}. Usando prompts para gerar manualmente.")
                             st.code(prompt_img, language="text")
                         
-                        time.sleep(2)
+                        time.sleep(3)
                         
                     except Exception as e:
                         st.error(f"❌ Erro: {str(e)}")
+                        st.info(f"💡 Use este prompt em Midjourney ou Leonardo.ai:")
                         st.code(prompt_img, language="text")
             
-            st.success(f"✅ Todas as {len(prompts_list)} imagens foram geradas com Flux Pro!")
+            st.success(f"✅ Processo concluído!")
     
     except Exception as e:
         st.error(f"❌ Erro: {str(e)}")
 
 st.markdown("---")
-st.markdown("Made with ❤️ | Powered by Google Gemini 2.0 Flash + Flux 1.1 Pro")
+st.markdown("Made with ❤️ | Powered by Google Gemini 2.0 Flash + Stable Diffusion XL")
