@@ -45,7 +45,7 @@ if st.button("🚀 Gerar Conteúdo Completo", type="primary", use_container_widt
         st.stop()
     
     try:
-        api_key = "AIzaSyDdhBQhmX_IXPH1vrIQA0hu4pyXhw9eSR4"
+        api_key = "AIzaSyC7_BhPwmurF0Wo8bNF3r-R20jmlCSJNGs"
         genai.configure(api_key=api_key)
         model_text = genai.GenerativeModel('gemini-2.0-flash-exp')
         
